@@ -25,7 +25,7 @@ import org.primefaces.model.UploadedFile;
 @ManagedBean
 public class FileBean implements Serializable {
 
-    public UploadedFile file;
+    private UploadedFile file;
     
     public boolean copyFile(String path, InputStream in) {
         
