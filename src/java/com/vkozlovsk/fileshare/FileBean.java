@@ -5,15 +5,14 @@
  */
 package com.vkozlovsk.fileshare;
 
-import javax.inject.Named;
-import javax.enterprise.context.Dependent;
 
-import java.util.Date;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.io.*;
-import javax.faces.application.FacesMessage;
-import javax.faces.context.FacesContext;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.*;
+import java.util.*;
+import javax.faces.bean.ManagedBean;
+import javax.faces.bean.SessionScoped;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.UploadedFile;
 
@@ -21,22 +20,15 @@ import org.primefaces.model.UploadedFile;
  *
  * @author vkozl
  */
-@Named(value = "fileBean")
-@Dependent
-public class FileBean {
 
-    private UploadedFile file;
-    private String ip;
-    private final String datetime; 
-    
-    public FileBean() {
-        DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss dd.MM.yyyy");
-        Date date = new Date();
-        datetime = dateFormat.format(date);
-    }
+@SessionScoped
+@ManagedBean
+public class FileBean implements Serializable {
+
+    public UploadedFile file;
     
     public boolean copyFile(String path, InputStream in) {
-        path = System.getProperty("java.io.tmpdir") + path;
+        
         try {
             OutputStream out = new FileOutputStream(new File(path)); 
             int read = 0;
@@ -54,48 +46,67 @@ public class FileBean {
             return false;
         }
     }
-    
-    
-    public String getIP() {
-        return ip;
+        
+    public List<FileModel> getFiles() throws ClassNotFoundException, SQLException {
+
+        Connection connect = null;
+
+        String url = "jdbc:postgresql://localhost:5432/filesharejava";
+
+        String username = "postgres";
+        String password = "postgres";
+
+        try {
+
+                Class.forName("org.postgresql.Driver");
+
+                connect = DriverManager.getConnection(url, username, password);
+                // System.out.println("Connection established"+connect);
+
+        } catch (SQLException ex) {
+                System.out.println("in exec");
+                System.out.println(ex.getMessage());
+        }
+
+        List<FileModel> files = new ArrayList<FileModel>();
+        PreparedStatement pstmt = connect.prepareStatement("SELECT * FROM files");
+        ResultSet rs = pstmt.executeQuery();
+
+        while (rs.next()) {
+            FileModel f = new FileModel();
+            f.setID(rs.getInt("file_id"));
+            f.setFilename(rs.getString("filename"));
+            f.setIP(rs.getString("ip"));
+            f.setTimestamp(rs.getInt("timestamp"));
+            files.add(f);
+
+        }
+
+        rs.close();
+        pstmt.close();
+        connect.close();
+        return files;
+
     }
+
     
-    public String getDateTime() {
-        return datetime;
+    public void upload() throws IOException {
+        if(file != null) {
+            System.out.print("UPLOAD METHOD WORKS!");
+        }
     }
-    
-    public UploadedFile getFile() {
-        return file;
-    }
-    
-    public void setFile(UploadedFile file) {
-        this.file = file;
-    }
-    
-    public void setIP(String s) {
-        ip = s;
-    }    
-    
-    public void upload(FileUploadEvent event) {     
+     
+    public void handleFileUpload(FileUploadEvent event) {     
         
         try {
-            file = event.getFile();
+            UploadedFile file = event.getFile();
             String filename = file.getFileName();
-            System.out.println("temp filename: " + filename);
-            copyFile(filename, file.getInputstream());
+            Path p = Paths.get(filename);
+            copyFile(p.getFileName().toString(), file.getInputstream());
         }
         catch (IOException e) {
             e.getMessage();
         }
     }
     
-    public void submit() {
-        try {
-            copyFile(file.getFileName(), file.getInputstream());
-            //photoPostDAO.createPost(filename, postDescription);
-        }
-        catch (IOException e) {
-            e.getMessage();
-        }
-    }
 }

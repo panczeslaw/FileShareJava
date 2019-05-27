@@ -2,9 +2,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:f="http://java.sun.com/jsf/core"
-      xmlns:ui="http://java.sun.com/jsf/facelets"
-      xmlns:p="http://primefaces.org/ui">
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
     <h:head>
         <title>FileShare</title>
         <meta name="theme-color" content="#343a40"></meta>
@@ -38,49 +37,43 @@
                     <div class="form-row">
                         <div class="col-md-9 mt-2">
                             <div class="custom-file">
-                                <p:fileUpload class="custom-file-input" id="customFile" fileUploadListener="#{fileBean.upload}" ></p:fileUpload>
+                                <p:fileUpload class="custom-file-input" id="customFile" fileUploadListener="#{fileBean.handleFileUpload}" mode="simple" dragDropSupport="true" value="#{fileBean.file}"></p:fileUpload>
                                 <label class="custom-file-label" for="fileForm:customFile" data-browse="Открыть">Выберите файл</label>
                             </div>
                         </div>
                         <div class="col-md-3 mt-2">
-                            <h:commandButton class="btn btn-primary btn-block" value="Загрузить" type="submit" action="#{fileBean.submit()}"></h:commandButton>
+                            <h:commandButton class="btn btn-primary btn-block" value="Загрузить" type="submit" action="#{fileBean.upload}"></h:commandButton>
                         </div>
                     </div>
                 </h:form>
                 <h3 class="my-3">Доступные файлы</h3>
                 <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th scope="col">ID</th> 
-                                <th scope="col">Имя файла</th>
-                                <th scope="col">IP-адрес</th>
-                                <th scope="col">Дата и время загрузки</th>
-                                <th scope="col">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in files %}
-                            <tr>
-                                <th scope="row">{{ i.id }}</th>
-                                <td><a href="{% url 'file' id=i.id %}" target="_blank">{{ i.file.name }}</a></td>
-                                <td>{{ i.ip }}</td>
-                                <td>{{ i.datetime }}</td>
-                                <td><a href="{% url 'download' id=i.id %}" role="button" class="btn btn-sm btn-primary btn-block">Скачать</a><a href="{% url 'delete' id=i.id %}" role="button" class="btn btn-sm btn-danger btn-block">Удалить</a></td>
-                            </tr>
-                            {% endfor %}
-                            {% if not files %}
-                            <tr>
-                                <td scope="row" colspan="5" class="text-center">Пока что нет файлов для обмена. Загрузите новый с помощью формы выше</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+                    <h:dataTable class="table table-hover" value="#{fileBean.files}" var="file">
+                    <h:column>
+                                    <f:facet name="header">#</f:facet>
+                    #{file.file_id}
+                    </h:column>
+                            <h:column>
+                                    <f:facet name="header">Имя файла</f:facet>
+                     #{file.filename}
+                  </h:column>
+                            <h:column>
+                                    <f:facet name="header">Дата и время</f:facet>
+                       #{file.datetime}
+                   </h:column>
+                            <h:column>
+                                    <f:facet name="header">IP</f:facet>
+                       #{file.ip}
+                   </h:column>
+                            <h:column>
+                                    <f:facet name="header">Действия</f:facet>
+                       
+                   </h:column>
+                    </h:dataTable>
+                    
                 </div>
             </div>
         </main>
-        <br />
-        <h:link outcome="welcomePrimefaces" value="Страница приветствия Primefaces" />
     </h:body>
     <script>
 $('.custom-file-input').on('change', function () {
