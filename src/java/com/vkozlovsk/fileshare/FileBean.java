@@ -7,12 +7,18 @@ package com.vkozlovsk.fileshare;
 
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.*;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.SessionScoped;
+import javax.faces.context.ExternalContext;
+import javax.faces.context.FacesContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.UploadedFile;
 
@@ -26,9 +32,28 @@ import org.primefaces.model.UploadedFile;
 public class FileBean implements Serializable {
 
     private UploadedFile file;
+    private String host;
     
-    public boolean copyFile(String path, InputStream in) {
-        
+    public String getHost() throws UnknownHostException {
+        return InetAddress.getLocalHost().getHostAddress() + ":8080";
+    }
+    
+    public void setHost(String x) {
+       
+    }
+    
+    public UploadedFile getFile() {
+        return file;
+    }
+    
+    public void setFile(UploadedFile file) {
+        this.file = file;
+    }
+    
+    public boolean copyFile(String path, Long timestamp, InputStream in) {
+        path = timestamp.toString() + "_" + path;
+        path = System.getProperty("java.io.tmpdir") + path;
+        System.out.println(path);
         try {
             OutputStream out = new FileOutputStream(new File(path)); 
             int read = 0;
@@ -73,11 +98,7 @@ public class FileBean implements Serializable {
         ResultSet rs = pstmt.executeQuery();
 
         while (rs.next()) {
-            FileModel f = new FileModel();
-            f.setID(rs.getInt("file_id"));
-            f.setFilename(rs.getString("filename"));
-            f.setIP(rs.getString("ip"));
-            f.setTimestamp(rs.getInt("timestamp"));
+            FileModel f = new FileModel(rs.getInt("file_id"), rs.getString("filename"), rs.getString("ip"), rs.getLong("timestamp"));
             files.add(f);
 
         }
@@ -90,23 +111,161 @@ public class FileBean implements Serializable {
     }
 
     
-    public void upload() throws IOException {
+    
+    
+    public void upload() throws IOException, ClassNotFoundException, SQLException {
         if(file != null) {
-            System.out.print("UPLOAD METHOD WORKS!");
-        }
-    }
-     
-    public void handleFileUpload(FileUploadEvent event) {     
-        
-        try {
-            UploadedFile file = event.getFile();
             String filename = file.getFileName();
             Path p = Paths.get(filename);
-            copyFile(p.getFileName().toString(), file.getInputstream());
-        }
-        catch (IOException e) {
-            e.getMessage();
+            filename = p.getFileName().toString(); 
+            Long l = System.currentTimeMillis();
+            copyFile(filename, l, file.getInputstream());
+            
+            Connection connect = null;
+
+            String url = "jdbc:postgresql://localhost:5432/filesharejava";
+
+            String username = "postgres";
+            String password = "postgres";
+
+            try {
+
+                    Class.forName("org.postgresql.Driver");
+
+                    connect = DriverManager.getConnection(url, username, password);
+                    // System.out.println("Connection established"+connect);
+
+            } catch (SQLException ex) {
+                    System.out.println("in exec");
+                    System.out.println(ex.getMessage());
+            }
+
+            List<FileModel> files = new ArrayList<FileModel>();
+            HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
+            String ipAddress = request.getHeader("X-FORWARDED-FOR");
+            if (ipAddress == null) {
+                ipAddress = request.getRemoteAddr();
+            }
+            System.out.println(ipAddress);
+            if (ipAddress.equals("0:0:0:0:0:0:0:1"))
+                ipAddress = InetAddress.getLocalHost().getHostAddress();
+            
+            Statement stmt = connect.createStatement();
+            stmt.execute("INSERT INTO files VALUES ('" + filename + "', '" + ipAddress + "', " + l + ")");
+            
+            stmt.close();
+            connect.close();
+            
+            ExternalContext externalContext = FacesContext.getCurrentInstance().getExternalContext();
+            externalContext.redirect("index.xhtml");
         }
     }
     
+    
+    public void delete(Integer id) throws IOException, ClassNotFoundException, SQLException {  
+        Connection connect = null;
+
+        String url = "jdbc:postgresql://localhost:5432/filesharejava";
+
+        String username = "postgres";
+        String password = "postgres";
+
+        try {
+
+                Class.forName("org.postgresql.Driver");
+
+                connect = DriverManager.getConnection(url, username, password);
+                // System.out.println("Connection established"+connect);
+
+        } catch (SQLException ex) {
+                System.out.println("in exec");
+                System.out.println(ex.getMessage());
+        }
+
+        PreparedStatement pstmt = connect.prepareStatement("SELECT * FROM files WHERE file_id = " + id);
+        ResultSet rs = pstmt.executeQuery();
+
+        while (rs.next()) {
+            FileModel f = new FileModel(rs.getInt("file_id"), rs.getString("filename"), rs.getString("ip"), rs.getLong("timestamp"));
+            File ff = new File(System.getProperty("java.io.tmpdir") + f.getTimestamp() + "_" + f.getFilename());
+            ff.delete();
+        }
+        rs.close();
+        
+        Statement stmt = connect.createStatement();
+        
+        stmt.execute("DELETE FROM files WHERE file_id = " + id);
+
+        stmt.close();
+        connect.close();
+            
+        ExternalContext externalContext = FacesContext.getCurrentInstance().getExternalContext();
+        externalContext.redirect("index.xhtml");
+    }
+    
+    
+    public void download(Integer id) throws IOException, ClassNotFoundException, SQLException {  
+        Connection connect = null;
+
+        String url = "jdbc:postgresql://localhost:5432/filesharejava";
+
+        String username = "postgres";
+        String password = "postgres";
+
+        try {
+
+                Class.forName("org.postgresql.Driver");
+
+                connect = DriverManager.getConnection(url, username, password);
+                // System.out.println("Connection established"+connect);
+
+        } catch (SQLException ex) {
+                System.out.println("in exec");
+                System.out.println(ex.getMessage());
+        }
+
+        PreparedStatement pstmt = connect.prepareStatement("SELECT * FROM files WHERE file_id = " + id);
+        ResultSet rs = pstmt.executeQuery();
+
+        rs.next();
+        FileModel f = new FileModel(rs.getInt("file_id"), rs.getString("filename"), rs.getString("ip"), rs.getLong("timestamp"));
+        File ff = new File(System.getProperty("java.io.tmpdir") + f.getTimestamp() + "_" + f.getFilename());
+        rs.close();
+        
+        connect.close();
+        
+        FacesContext facesContext = FacesContext.getCurrentInstance();
+
+        HttpServletResponse response = (HttpServletResponse) facesContext.getExternalContext().getResponse();
+
+        response.reset();
+        response.setHeader("Content-Type", "application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment;filename=" + f.getFilename());
+
+        OutputStream responseOutputStream = response.getOutputStream();
+
+        InputStream fileInputStream = new FileInputStream(ff);
+
+        byte[] bytesBuffer = new byte[2048];
+        int bytesRead;
+        while ((bytesRead = fileInputStream.read(bytesBuffer)) > 0) 
+        {
+            responseOutputStream.write(bytesBuffer, 0, bytesRead);
+        }
+
+        responseOutputStream.flush();
+
+        fileInputStream.close();
+        responseOutputStream.close();
+
+        facesContext.responseComplete();
+        
+        /*ExternalContext externalContext = FacesContext.getCurrentInstance().getExternalContext();
+        externalContext.redirect("index.xhtml");*/
+    }
+    
+    public void handleFileUpload(FileUploadEvent event) {     
+ 
+    }
+   
 }

@@ -21,4 +21,5 @@
     <welcome-file-list>
         <welcome-file>faces/index.xhtml</welcome-file>
     </welcome-file-list>
+    <!--<http-listener id="http-listener-1" port="8000" address="0.0.0.0" default-virtual-server="server" server-name="" />-->
 </web-app>

@@ -5,15 +5,17 @@
  */
 package com.vkozlovsk.fileshare;
 
+import java.util.Date;
+
 public class FileModel {
     private Integer fileID;
     private String filename;
     private String ip;
-    private Integer timestamp; 
+    private Long timestamp; 
     
     public FileModel() {}
     
-    public FileModel(Integer fileID, String filename, String ip, Integer timestamp) {
+    public FileModel(Integer fileID, String filename, String ip, Long timestamp) {
         this.fileID = fileID;
         this.filename = timestamp.toString() + "_" + filename;
         this.ip = ip;
@@ -28,8 +30,12 @@ public class FileModel {
         return ip;
     }
     
-    public Integer getTimestamp() {
+    public Long getTimestamp() {
         return timestamp;
+    }
+    
+    public String getDatetime() {
+        return (new Date(timestamp)).toString();
     }
     
     public String getFilename() {
@@ -44,7 +50,7 @@ public class FileModel {
         this.ip = ip;
     }
     
-    public void setTimestamp(Integer timestamp) {
+    public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
         this.filename = timestamp.toString() + "_" + getFilename();
     }
