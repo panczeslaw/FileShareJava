@@ -114,7 +114,7 @@ public class FileBean implements Serializable {
     
     
     public void upload() throws IOException, ClassNotFoundException, SQLException {
-        if(file != null) {
+        if(file != null && !file.getFileName().equals("")) {
             String filename = file.getFileName();
             Path p = Paths.get(filename);
             filename = p.getFileName().toString(); 

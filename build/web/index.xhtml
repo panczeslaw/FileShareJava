@@ -49,6 +49,7 @@
                 <h3 class="my-3">Доступные файлы</h3>
                 <div class="table-responsive">
                     <h:dataTable class="table table-hover" value="#{fileBean.files}" var="file">
+                       
                     <h:column>
                                     <f:facet name="header">#</f:facet>
                     #{file.getID()}
@@ -78,6 +79,9 @@
                 </div>
             </div>
         </main>
+        <footer class="text-center">
+            <p class="lead">Created by @panczeslaw</p>
+        </footer>
     </h:body>
     <script>
 $('.custom-file-input').on('change', function () {
